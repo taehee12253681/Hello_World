@@ -26,10 +26,12 @@ export function useAuth() {
 
 function sessionToUser(session) {
   if (!session?.user) return null;
+  const nickname = session.user.user_metadata?.nickname || null;
   return {
     id: session.user.id,
     email: session.user.email,
-    // 아직 닉네임 기능이 없으니 이메일 앞부분을 임시 이름으로 사용
-    name: session.user.email.split('@')[0],
+    nickname,
+    // 닉네임을 아직 설정하지 않았으면 이메일 앞부분을 임시로 보여준다
+    name: nickname || session.user.email.split('@')[0],
   };
 }
