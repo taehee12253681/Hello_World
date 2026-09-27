@@ -128,6 +128,11 @@ export default function RoomList({ currentUser, onSelectRoom }) {
             <div style={{ color: 'var(--ink-dim)', margin: '6px 0' }}>
               {room.app_name} · {room.store_name}
             </div>
+            {room.created_by_name && (
+              <div style={{ color: 'var(--ink-dim)', fontSize: '0.8rem' }}>
+                만든이: {room.created_by_name}
+              </div>
+            )}
             <div className="num" style={{ fontWeight: 700 }}>
               최소주문 {room.min_amount.toLocaleString()}원
             </div>
@@ -207,6 +212,7 @@ function CreateRoomForm({ currentUser, onClose, onCreated }) {
         max_participants: Number(form.max_participants) || 0,
         pickup_location: form.pickup_location,
         created_by: currentUser.id,
+        created_by_name: currentUser.name,
       })
       .select()
       .single();

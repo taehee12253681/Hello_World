@@ -21,6 +21,14 @@ export default function NicknameSetup({ currentUser, mode = 'setup', onSaved, on
 
     const { error } = await supabase.auth.updateUser({ data: { nickname: trimmed } });
 
+    if (!error) {
+      // 이미 참여했던 방/만들었던 방에 박혀있는 이전 이름도 새 닉네임으로 맞춰준다
+      await Promise.all([
+        supabase.from('participants').update({ display_name: trimmed }).eq('user_id', currentUser.id),
+        supabase.from('rooms').update({ created_by_name: trimmed }).eq('created_by', currentUser.id),
+      ]);
+    }
+
     setSaving(false);
 
     if (error) {
