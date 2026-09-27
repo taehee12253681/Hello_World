@@ -170,7 +170,12 @@ export default function GameCenter({ roomId, currentUser, roomStatus }) {
 
     await supabase
       .from('rooms')
-      .update({ delivery_payer_id: loserUserId, delivery_payer_name: loserName, payer_stake: game.stake })
+      .update({
+        delivery_payer_id: loserUserId,
+        delivery_payer_name: loserName,
+        payer_stake: game.stake,
+        delivery_game_id: game.id,
+      })
       .eq('id', roomId);
 
     await postSystemMessage(`🎯 ${label} 결과: ${loserName}님이 ${STAKE_LABELS[game.stake]} 부담하게 됐어요!`);

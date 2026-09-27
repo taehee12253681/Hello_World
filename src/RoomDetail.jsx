@@ -8,6 +8,7 @@ export default function RoomDetail({ roomId, currentUser }) {
   const [participants, setParticipants] = useState([]);
   const [items, setItems] = useState([{ name: '', price: '' }]);
   const [banner, setBanner] = useState(null);
+  const [betGamePlayerIds, setBetGamePlayerIds] = useState([]);
   const reachedGoalRef = useRef(false); // 목표 달성 알림이 이미 떴는지 추적
 
   const currentTotal = participants.reduce((sum, p) => sum + p.total, 0);
@@ -50,6 +51,21 @@ export default function RoomDetail({ roomId, currentUser }) {
     }, 60 * 1000);
     return () => clearInterval(timer);
   }, [room]);
+
+  // 내기 결과가 나오면, 그 게임에 실제로 참가했던 사람이 누구였는지 가져온다
+  // (내기 결과는 참가자 전원이 아니라 그 게임에 참가한 사람들 사이에서만 적용됨)
+  useEffect(() => {
+    fetchBetGamePlayers();
+  }, [room?.delivery_game_id]);
+
+  async function fetchBetGamePlayers() {
+    if (!room?.delivery_game_id) {
+      setBetGamePlayerIds([]);
+      return;
+    }
+    const { data } = await supabase.from('game_players').select('user_id').eq('game_id', room.delivery_game_id);
+    setBetGamePlayerIds((data || []).map((p) => p.user_id));
+  }
 
   async function fetchRoom() {
     const { data } = await supabase.from('rooms').select('*').eq('id', roomId).single();
@@ -162,7 +178,7 @@ export default function RoomDetail({ roomId, currentUser }) {
 
       {/* 4. 정산 화면 */}
       {room.status === 'closed' && (
-        <Settlement room={room} participants={participants} />
+        <Settlement room={room} participants={participants} betGamePlayerIds={betGamePlayerIds} />
       )}
     </div>
   );
@@ -249,39 +265,52 @@ function RoomChat({ roomId, currentUser, roomStatus }) {
   );
 }
 
-function Settlement({ room, participants }) {
-  const hasBetResult = Boolean(room.delivery_payer_id);
-  const totalSum = participants.reduce((sum, p) => sum + p.total, 0);
+// 내기는 "그 게임에 참가한 사람들" 사이에서만 적용된다. 참가 안 한 사람은
+// 원래대로 배달비를 1/N로 나눈 자기 몫을 그대로 낸다.
+function Settlement({ room, participants, betGamePlayerIds }) {
+  const n = participants.length;
+  const baseFeePerPerson = n > 0 ? Math.ceil(room.delivery_fee / n) : 0;
+  const groupIds = betGamePlayerIds || [];
+  const hasBetResult = Boolean(room.delivery_payer_id) && groupIds.length > 0;
+
+  const groupParticipants = participants.filter((p) => groupIds.includes(p.user_id));
+  const groupFeeShare = baseFeePerPerson * groupParticipants.length;
+  const groupTotalSum = groupParticipants.reduce((sum, p) => sum + p.total, 0);
 
   function amountFor(p) {
-    if (!hasBetResult) {
-      const feePerPerson = participants.length > 0 ? Math.ceil(room.delivery_fee / participants.length) : 0;
-      return { pay: p.total + feePerPerson, note: `메뉴 ${p.total.toLocaleString()}원 + 배달비 ${feePerPerson.toLocaleString()}원` };
+    const inGroup = hasBetResult && groupIds.includes(p.user_id);
+
+    if (!inGroup) {
+      return { pay: p.total + baseFeePerPerson, note: `메뉴 ${p.total.toLocaleString()}원 + 배달비 ${baseFeePerPerson.toLocaleString()}원` };
     }
+
     const isPayer = p.user_id === room.delivery_payer_id;
+
     if (room.payer_stake === 'total_amount') {
       return isPayer
-        ? { pay: totalSum + room.delivery_fee, note: '내기 결과: 전체 주문금액 + 배달비 전부 부담' }
-        : { pay: 0, note: '내기 결과: 0원 (몰아주기 당첨자가 대신 부담)' };
+        ? { pay: groupTotalSum + groupFeeShare, note: `내기 참가자 ${groupParticipants.length}명의 메뉴+배달비 몫 전부 부담` }
+        : { pay: 0, note: '내기 결과: 0원 (같은 내기 참가자가 대신 부담)' };
     }
+
     return isPayer
-      ? { pay: p.total + room.delivery_fee, note: `메뉴 ${p.total.toLocaleString()}원 + 배달비 전액 ${room.delivery_fee.toLocaleString()}원` }
-      : { pay: p.total, note: `메뉴 ${p.total.toLocaleString()}원 (배달비 0원, 내기로 면제)` };
+      ? { pay: p.total + groupFeeShare, note: `메뉴 ${p.total.toLocaleString()}원 + 배달비 몫 ${groupFeeShare.toLocaleString()}원(내기 참가자 ${groupParticipants.length}명분)` }
+      : { pay: p.total, note: `메뉴 ${p.total.toLocaleString()}원 (배달비 몫 0원, 내기로 면제)` };
   }
 
   return (
     <div className="card" style={{ marginTop: 16 }}>
       <h3 style={{ marginBottom: 10 }}>정산 결과</h3>
 
-      {hasBetResult ? (
+      <p style={{ color: 'var(--ink-dim)', marginBottom: 10 }}>
+        배달비 {room.delivery_fee.toLocaleString()}원 ÷ {n}명 = 1인당 {baseFeePerPerson.toLocaleString()}원이 기본 몫이에요.
+      </p>
+
+      {hasBetResult && (
         <div className="banner" style={{ marginBottom: 12 }}>
-          🎲 내기 결과: {room.delivery_payer_name}님이 {room.payer_stake === 'total_amount' ? '전체 주문금액' : '배달비 전액'}을 부담해요!
+          🎲 내기 결과: 내기에 참가한 {groupParticipants.length}명 중 {room.delivery_payer_name}님이{' '}
+          {room.payer_stake === 'total_amount' ? '그 참가자들 몫 전체' : '그 참가자들의 배달비 몫 전부'}를 부담해요.
+          나머지 참가자는 원래 몫 그대로예요.
         </div>
-      ) : (
-        <p style={{ color: 'var(--ink-dim)', marginBottom: 10 }}>
-          배달비 {room.delivery_fee.toLocaleString()}원 ÷ {participants.length}명 = 1인당{' '}
-          {(participants.length > 0 ? Math.ceil(room.delivery_fee / participants.length) : 0).toLocaleString()}원
-        </p>
       )}
 
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
