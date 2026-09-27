@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&family=Baloo+2:wght@500;700;800&display=swap');
+
+:root {
+  --carrot: #ff7a2f;
+  --carrot-deep: #e0600f;
+  --carrot-light: #ffe9d8;
+  --mint: #22b27d;
+  --mint-light: #ddf5ec;
+  --cream: #fffbf5;
+  --surface: #ffffff;
+  --ink: #26211c;
+  --ink-dim: #8a8178;
+  --line: #f0e4d6;
+  --shadow: 0 10px 24px -12px rgba(38, 33, 28, 0.2);
+  --shadow-hover: 0 14px 28px -12px rgba(255, 122, 47, 0.35);
+
+  --sans: 'Gothic A1', system-ui, sans-serif;
+  --heading: 'Gothic A1', system-ui, sans-serif;
+  --num: 'Baloo 2', 'Gothic A1', system-ui, sans-serif;
+
+  font: 16px/1.5 var(--sans);
+  color-scheme: light;
+  color: var(--ink);
+  background: var(--cream);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--cream);
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--heading);
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+}
+
+input, select, button, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--carrot);
+  outline-offset: 2px;
+}
+
+.num {
+  font-family: var(--num);
+  font-variant-numeric: tabular-nums;
+}
