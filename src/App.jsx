@@ -3,6 +3,7 @@ import { useAuth } from './useAuth';
 import { supabase } from './supabaseClient';
 import RoomList from './RoomList';
 import RoomDetail from './RoomDetail';
+import NicknameSetup from './NicknameSetup';
 import './App.css';
 
 // ⚠️ 개발 중 임시 자동 로그인. 이메일 인증 붙이면 이 부분을 지우고 <Login />으로 되돌리세요.
@@ -14,6 +15,7 @@ function App() {
   const { currentUser, loading } = useAuth();
   const [selectedRoomId, setSelectedRoomId] = useState(null);
   const [devError, setDevError] = useState(null);
+  const [editingNickname, setEditingNickname] = useState(false);
 
   useEffect(() => {
     if (DEV_MODE && !loading && !currentUser) {
@@ -46,11 +48,21 @@ function App() {
             <span className="logo" aria-hidden="true" />
             인하동네 공동배달
           </div>
-          {selectedRoomId && (
-            <button className="btn btn-ghost btn-sm" onClick={() => setSelectedRoomId(null)}>
-              방 목록으로
-            </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {currentUser?.nickname && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}>
+                {currentUser.nickname}님
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditingNickname((v) => !v)}>
+                  닉네임 수정
+                </button>
+              </span>
+            )}
+            {selectedRoomId && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setSelectedRoomId(null)}>
+                방 목록으로
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -58,6 +70,15 @@ function App() {
         <div className="wrap">
           {loading || (DEV_MODE && !currentUser) ? (
             <p className="empty-state">불러오는 중...</p>
+          ) : !currentUser.nickname ? (
+            <NicknameSetup currentUser={currentUser} mode="setup" />
+          ) : editingNickname ? (
+            <NicknameSetup
+              currentUser={currentUser}
+              mode="edit"
+              onSaved={() => setEditingNickname(false)}
+              onCancel={() => setEditingNickname(false)}
+            />
           ) : selectedRoomId ? (
             <RoomDetail roomId={selectedRoomId} currentUser={currentUser} />
           ) : (
