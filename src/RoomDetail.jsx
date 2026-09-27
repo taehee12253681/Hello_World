@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from './supabaseClient';
+import GameCenter from './GameCenter';
 
 // currentUser: { id, name } — 상위 컴포넌트(인증 로직)에서 전달받는다고 가정
 export default function RoomDetail({ roomId, currentUser }) {
@@ -156,8 +157,8 @@ export default function RoomDetail({ roomId, currentUser }) {
         <button className="btn btn-ghost" onClick={handleClose} style={{ marginTop: 16 }}>모집 마감하기</button>
       )}
 
-      {/* 소분 방법을 의논하는 방 채팅 */}
-      <RoomChat roomId={roomId} currentUser={currentUser} />
+      {/* 소분 방법을 의논하는 방 채팅 (+ 배달비 몰아주기 내기) */}
+      <RoomChat roomId={roomId} currentUser={currentUser} roomStatus={room.status} />
 
       {/* 4. 정산 화면 */}
       {room.status === 'closed' && (
@@ -167,7 +168,7 @@ export default function RoomDetail({ roomId, currentUser }) {
   );
 }
 
-function RoomChat({ roomId, currentUser }) {
+function RoomChat({ roomId, currentUser, roomStatus }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const logRef = useRef(null);
@@ -216,6 +217,8 @@ function RoomChat({ roomId, currentUser }) {
     <div className="card chat" style={{ marginTop: 16 }}>
       <h4>소분 상의 채팅</h4>
 
+      <GameCenter roomId={roomId} currentUser={currentUser} roomStatus={roomStatus} />
+
       <div className="chat-log" ref={logRef}>
         {messages.length === 0 && (
           <p className="empty-state" style={{ padding: '1rem 0' }}>
@@ -247,23 +250,50 @@ function RoomChat({ roomId, currentUser }) {
 }
 
 function Settlement({ room, participants }) {
-  const feePerPerson = participants.length > 0
-    ? Math.ceil(room.delivery_fee / participants.length)
-    : 0;
+  const hasBetResult = Boolean(room.delivery_payer_id);
+  const totalSum = participants.reduce((sum, p) => sum + p.total, 0);
+
+  function amountFor(p) {
+    if (!hasBetResult) {
+      const feePerPerson = participants.length > 0 ? Math.ceil(room.delivery_fee / participants.length) : 0;
+      return { pay: p.total + feePerPerson, note: `메뉴 ${p.total.toLocaleString()}원 + 배달비 ${feePerPerson.toLocaleString()}원` };
+    }
+    const isPayer = p.user_id === room.delivery_payer_id;
+    if (room.payer_stake === 'total_amount') {
+      return isPayer
+        ? { pay: totalSum + room.delivery_fee, note: '내기 결과: 전체 주문금액 + 배달비 전부 부담' }
+        : { pay: 0, note: '내기 결과: 0원 (몰아주기 당첨자가 대신 부담)' };
+    }
+    return isPayer
+      ? { pay: p.total + room.delivery_fee, note: `메뉴 ${p.total.toLocaleString()}원 + 배달비 전액 ${room.delivery_fee.toLocaleString()}원` }
+      : { pay: p.total, note: `메뉴 ${p.total.toLocaleString()}원 (배달비 0원, 내기로 면제)` };
+  }
 
   return (
     <div className="card" style={{ marginTop: 16 }}>
       <h3 style={{ marginBottom: 10 }}>정산 결과</h3>
-      <p style={{ color: 'var(--ink-dim)', marginBottom: 10 }}>
-        배달비 {room.delivery_fee.toLocaleString()}원 ÷ {participants.length}명 = 1인당 {feePerPerson.toLocaleString()}원
-      </p>
+
+      {hasBetResult ? (
+        <div className="banner" style={{ marginBottom: 12 }}>
+          🎲 내기 결과: {room.delivery_payer_name}님이 {room.payer_stake === 'total_amount' ? '전체 주문금액' : '배달비 전액'}을 부담해요!
+        </div>
+      ) : (
+        <p style={{ color: 'var(--ink-dim)', marginBottom: 10 }}>
+          배달비 {room.delivery_fee.toLocaleString()}원 ÷ {participants.length}명 = 1인당{' '}
+          {(participants.length > 0 ? Math.ceil(room.delivery_fee / participants.length) : 0).toLocaleString()}원
+        </p>
+      )}
+
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {participants.map((p) => (
-          <li key={p.id}>
-            {p.display_name}: 메뉴 {p.total.toLocaleString()}원 + 배달비 {feePerPerson.toLocaleString()}원
-            {' '}= <strong className="num">{(p.total + feePerPerson).toLocaleString()}원</strong>
-          </li>
-        ))}
+        {participants.map((p) => {
+          const { pay, note } = amountFor(p);
+          return (
+            <li key={p.id}>
+              {p.display_name}: {note}
+              {' '}= <strong className="num">{pay.toLocaleString()}원</strong>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
