@@ -6,19 +6,24 @@
 
 1. 저장소 클론
    ```
-   git clone <repo-url>
+   git clone https://github.com/taehee12253681/dorm-delivery.git
    cd dorm-delivery
    ```
 2. 패키지 설치
    ```
    npm install
    ```
-3. 환경변수 설정: `.env.example`을 복사해 `.env`를 만들고, Supabase 프로젝트 값을 채운다.
+3. 환경변수 설정: `.env.example`을 복사해 `.env`를 만들고, .env 파일에 Supabase 프로젝트 값을 채운다.
    ```
    cp .env.example .env
    ```
-   `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 값은 Supabase 대시보드 > Settings > API에서 확인하거나, 팀 채널에서 공유받는다. (한 프로젝트를 공유해서 쓰므로 팀원 전체가 같은 값을 쓰면 된다.)
-4. 개발 서버 실행
+   <VITE_SUPABASE_URL>
+   https://uvvsdvtkjkmjreawsyyn.supabase.co/rest/v1/
+
+   <VITE_SUPABASE_ANON_KEY>
+   sb_publishable_cbl0xSvU2q--WWo3Ue87vg_6Zw8E_eV
+
+5. 개발 서버 실행
    ```
    npm run dev
    ```
