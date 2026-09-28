@@ -55,6 +55,12 @@ export default function RoomList({ currentUser, onSelectRoom }) {
         { event: '*', schema: 'public', table: 'rooms' },
         () => fetchRooms(),
       )
+      // 누가 참여/수정하면 카드의 주문 충족 현황바도 갱신
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'participants' },
+        () => fetchRooms(),
+      )
       .subscribe();
 
     return () => supabase.removeChannel(channel);
@@ -67,7 +73,21 @@ export default function RoomList({ currentUser, onSelectRoom }) {
       .eq('status', 'open')
       .order('deadline', { ascending: true });
 
-    if (!error) setRooms(data);
+    if (error) return;
+
+    // 방별 현재 주문금액 합계 (주문 충족 현황바용)
+    const totals = {};
+    if (data.length > 0) {
+      const { data: parts } = await supabase
+        .from('participants')
+        .select('room_id, total')
+        .in('room_id', data.map((r) => r.id));
+      for (const p of parts || []) {
+        totals[p.room_id] = (totals[p.room_id] || 0) + p.total;
+      }
+    }
+
+    setRooms(data.map((r) => ({ ...r, current_total: totals[r.id] || 0 })));
   }
 
   const visibleRooms = rooms.filter((room) => {
@@ -133,9 +153,7 @@ export default function RoomList({ currentUser, onSelectRoom }) {
                 만든이: {room.created_by_name}
               </div>
             )}
-            <div className="num" style={{ fontWeight: 700 }}>
-              최소주문 {room.min_amount.toLocaleString()}원
-            </div>
+            <OrderProgress current={room.current_total} min={room.min_amount} />
             <div style={{ color: 'var(--ink-dim)', fontSize: '0.85rem', marginTop: 4 }}>
               마감 {new Date(room.deadline).toLocaleString()}
             </div>
@@ -153,6 +171,23 @@ export default function RoomList({ currentUser, onSelectRoom }) {
           onCreated={(roomId) => { setShowForm(false); onSelectRoom(roomId); }}
         />
       )}
+    </div>
+  );
+}
+
+// 방 상세의 진행률 바와 같은 스타일 (progress-track / progress-fill)
+function OrderProgress({ current, min }) {
+  const progress = min > 0 ? Math.min(100, Math.round((current / min) * 100)) : 100;
+  const done = current >= min;
+  return (
+    <div style={{ margin: '4px 0 8px' }}>
+      <div className="num" style={{ fontWeight: 700, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+        <span>{current.toLocaleString()}원 / 최소 {min.toLocaleString()}원</span>
+        <span style={{ color: done ? '#158a5f' : 'var(--carrot-deep)' }}>{done ? '충족 🎉' : `${progress}%`}</span>
+      </div>
+      <div className="progress-track" style={{ height: 8, marginTop: 6 }}>
+        <div className={`progress-fill ${done ? 'done' : ''}`} style={{ width: `${progress}%` }} />
+      </div>
     </div>
   );
 }
