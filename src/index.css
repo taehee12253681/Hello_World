@@ -1,18 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800;900&family=Baloo+2:wght@500;700;800&display=swap');
 
 :root {
-  --carrot: #ff7a2f;
-  --carrot-deep: #e0600f;
-  --carrot-light: #ffe9d8;
-  --mint: #22b27d;
-  --mint-light: #ddf5ec;
-  --cream: #fffbf5;
+  --blue: #2563eb;
+  --blue-deep: #1d4ed8;
+  --blue-light: #dbeafe;
+  --sky: #38bdf8;
+  --sky-light: #e0f2fe;
+  --sky-text: #0369a1;
+  --bg: #f3f8ff;
   --surface: #ffffff;
-  --ink: #26211c;
-  --ink-dim: #8a8178;
-  --line: #f0e4d6;
-  --shadow: 0 10px 24px -12px rgba(38, 33, 28, 0.2);
-  --shadow-hover: 0 14px 28px -12px rgba(255, 122, 47, 0.35);
+  --ink: #172033;
+  --ink-dim: #64748b;
+  --line: #dbe6f3;
+  --shadow: 0 10px 24px -12px rgba(23, 32, 51, 0.18);
+  --shadow-hover: 0 14px 28px -12px rgba(37, 99, 235, 0.35);
 
   --sans: 'Gothic A1', system-ui, sans-serif;
   --heading: 'Gothic A1', system-ui, sans-serif;
@@ -21,7 +22,7 @@
   font: 16px/1.5 var(--sans);
   color-scheme: light;
   color: var(--ink);
-  background: var(--cream);
+  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -34,7 +35,7 @@
 
 body {
   margin: 0;
-  background: var(--cream);
+  background: var(--bg);
 }
 
 #root {
@@ -61,7 +62,7 @@ input, select, button, textarea {
 }
 
 :focus-visible {
-  outline: 3px solid var(--carrot);
+  outline: 3px solid var(--blue);
   outline-offset: 2px;
 }
 

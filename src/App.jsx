@@ -4,10 +4,11 @@ import { supabase } from './supabaseClient';
 import RoomList from './RoomList';
 import RoomDetail from './RoomDetail';
 import NicknameSetup from './NicknameSetup';
+import Login from './Login';
 import './App.css';
 
-// ⚠️ 개발 중 임시 자동 로그인. 이메일 인증 붙이면 이 부분을 지우고 <Login />으로 되돌리세요.
-const DEV_MODE = true;
+// ⚠️ 개발 중 임시 자동 로그인. true로 바꾸면 이메일 인증 없이 테스트 계정으로 로그인된다.
+const DEV_MODE = false;
 const DEV_EMAIL = 'test@inha.edu';
 const DEV_PASSWORD = 'test123';
 
@@ -28,6 +29,12 @@ function App() {
         });
     }
   }, [loading, currentUser]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setSelectedRoomId(null);
+    setEditingNickname(false);
+  }
 
   if (devError) {
     return (
@@ -57,6 +64,11 @@ function App() {
                 </button>
               </span>
             )}
+            {currentUser && (
+              <button className="btn btn-ghost btn-sm" onClick={handleLogout}>
+                로그아웃
+              </button>
+            )}
             {selectedRoomId && (
               <button className="btn btn-ghost btn-sm" onClick={() => setSelectedRoomId(null)}>
                 방 목록으로
@@ -70,6 +82,8 @@ function App() {
         <div className="wrap">
           {loading || (DEV_MODE && !currentUser) ? (
             <p className="empty-state">불러오는 중...</p>
+          ) : !currentUser ? (
+            <Login />
           ) : !currentUser.nickname ? (
             <NicknameSetup currentUser={currentUser} mode="setup" />
           ) : editingNickname ? (
